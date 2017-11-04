@@ -5,27 +5,106 @@
 # build up the already contians array at the same time as the sector map array
 from pprint import pprint
 
-items_in_sector = 0
+places_in_sector = 0
 
 class Sudoku_Solver:
     # the sudoku is a 2d array that should bij evenly
     # divisable in both the x and y dir by sectorsize
     # it can contain numbers form 0 through 9 in which 0 means empty
-    sudoku_list = list
+    sudoku_list = []
+    search_checks = 0
+    hack = []
 
     def __init__(self, sudoku_array_list):
         # each sudokuarraylist contians a sudoku as an arrray in place 0
         # and it's sectorsize at place 1
         # todo add errorchecking (maybe)
-        sudoku_list = []
         for item in sudoku_array_list:
-            sudoku_list.append(self.Sudoku(item[0], item[1]))
+            self.sudoku_list.append(self.Sudoku(item[0], item[1]))
+
 
     def solve(self):
-        self._search_pulse()
+        # for collums interate 1st coord
+        # for rows interate 2nd coord
+        sudoku = self.sudoku_list[0]
+
+
+        for i in range(len(sudoku.sector_array)):
+            for j in range(len(sudoku.sector_array)):
+                sector = sudoku.sector_array[i][j]
+                pprint(sector.sector)
+                print()
+                self._search_sector(sector, sudoku)
+                print()
+                pprint(sector.sector)
+
+
+
+    def _search_sector(self, sector, sudoku):
+        changed_data = False
+        coords = sector.coords
+
+        print("searching " + str(coords))
+        gridsize = len(sudoku.sector_array)
+        row_sector_list = []
+        collum_sector_list = []
+        for i in range(gridsize):
+            if i is not coords[0]:
+                row_sector_list.append([i, coords[1]])
+            if i is not coords[1]:
+                collum_sector_list.append([coords[0], i])
+        rows = sudoku.get_rows(row_sector_list)
+        collums = sudoku.get_rows(collum_sector_list)
+
+        for n in range(1, sudoku.places_per_sector+1):
+            if n not in sector.contains:
+                temp_bools = [list(i) for i in sector.bools]
+                for j in range(len(temp_bools)):
+                    if n in rows[j]:
+                        temp_bools = self._mk_row_false(temp_bools, j)
+                    if n in collums[j]:
+                        temp_bools = self._mk_collum_false(temp_bools, j)
+                    self.search_checks += 1
+
+                b, coord = self._check_if_one_place(temp_bools)
+                if b:
+                    print("data acessed added "+ str(n))
+                    print("coord = " + str(coord))
+                    sector.change_value(n, coord)
+                    changed_data = True
+
+        return changed_data
+
+
+    def _mk_collum_false(self, bools, x):
+        for i in range(len(bools[0])):
+            bools[x][i] = False
+        return bools
+
+    def _mk_row_false(self, bools, y):
+        for i in range(len(bools)):
+            bools[i][y] = False
+        return bools
+
+    def _check_if_one_place(self, temp_bools):
+        found_one = False
+        coord = []
+        for i in range(len(temp_bools)):
+            for j in range(len(temp_bools[0])):
+                if temp_bools[i][j]:
+                    if not found_one:
+                        found_one = True
+                        coord = [i, j]
+                    else:
+                        return False, []
+        return True, coord
+
+    def _search_pulse(self, sudoku):
+        pass
 
     class Sudoku:
         sector_array = ()
+        places_per_sector = int
 
         def __init__(self, sudoku_array, sector_size):
             if len(sudoku_array) % sector_size == 0:
@@ -64,62 +143,93 @@ class Sudoku_Solver:
                 for j in range(len(sector_data_array[0])):
                     sector_array[i].append(self.Sector(sector_data_array[i][j], [i, j], sector_size))
             self.sector_array = tuple(sector_array)
+            self.places_per_sector = sector_size * sector_size
 
         def get_collums(self, sector_list):
-            pass
+            results = []
+            for item in sector_list:
+                results.append(
+                    self.sector_array[item[0]][item[1]].get_sector_collums()
+                )
+            return self._merge_results(results)
 
         def get_rows(self, sector_list):
-            pass
+            results = []
+            for item in sector_list:
+                results.append(
+                    self.sector_array[item[0]][item[1]].get_sector_rows()
+                    )
+            return self._merge_results(results)
+
+        def _merge_results(self, results):
+            ret = []
+            for i in range(len(results[0])):
+                ret.append([])
+                for j in results:
+                    for k in j[i]:
+                        ret[i].append(k)
+            return ret
 
         class Sector:
-            sector = tuple
-            bools = tuple
-            contains = tuple
-            coords = tuple
-            items_in_sector = tuple
+            sector = list
+            bools = list
+            contains = list
+            coords = list
+            places_in_sector = int
 
             def __init__(self, sector, coords, sector_size):
-                # the sectormap three properties.
-                # the fist item is a 2d bool array of the sector where a filled in space if false and empty is true
-                # the second item is an array with all the numbers the sector already contains
-                # the third item is a tuple of the coords
+                # the sectormap five properties.
+                # bools is is a 2d bool array of the sector where a filled in space if false and empty is true
+                # sector is the numbers contained in the sector as a 2d tuple
+                # contains is an array with all the numbers the sector already contains
+                # coords is a tuple of the coords of the sector withing the sudoku
+                # places in sector is the number of spots in the sector
                 bools = []
                 contains = []
                 for i in range(len(sector[0])):
                     bools.append([])
                     row_int = len(bools) - 1
                     for j in range(len(sector)):
-                        item = sector[j][i]
+                        item = sector[i][j]
                         if item > 0:
                             bools[row_int].append(False)
                             contains.append(item)
                         else:
                             bools[row_int].append(True)
 
-                self.sector = tuple(sector)
-                self.bools = tuple(bools)
-                self.contains = tuple(contains)
-                self.coords = tuple(coords)
-                self.items_per_sector = tuple(sector_size * sector_size)
+                self.sector = sector
+                self.bools = bools
+                self.contains = contains
+                self.coords = coords
+                self.items_per_sector = sector_size * sector_size
 
-            def change_value(self, value, x, y):
+            def change_value(self, value, coord):
+                if coord == []:#todo there's a bug here
+                    print("no coord given")
+                    print("coord = " + str(coord))
+                    raise ValueError
                 if value in self.contains:
-                    print("sector " + str(self.coords) + "already contains " + str(value))
+                    print("sector " + str(self.coords) + " already contains " + str(value))
+                    print("sector = " + str(self.sector))
+                    print("contains = " + str(self.contains))
                     raise ValueError
                 if value > self.items_per_sector:
                     print(str(value) + "is higher than the allowed in this sector.\n "
                                        "the maximum is " + str(self.items_per_sector))
                 #todo more errorchecking (if i can be bothered)
 
-                sector = [list(i) for i in self.sector]
-                bools = [list(i) for i in self.bools]
-                contains = [list(i) for i in self.contains]
+                x = coord[0]
+                y = coord[1]
+
+                sector = self.sector
+                bools = self.bools
+                contains = self.contains
                 sector[x][y] = value
                 bools[x][y] = False
                 contains.append(value)
-                self.sector = (tuple(i) for i in sector)
-                self.bools = (tuple(i) for i in bools)
-                self.contains = (tuple(i) for i in contains)
+                self.sector = sector
+                self.bools = bools
+                self.contains = contains
 
             def get_sector_rows(self):
                 rows = []
@@ -138,23 +248,6 @@ class Sudoku_Solver:
                 return collums
 
 
-    def _check_sector(self, sector):
-        pass
-
-
-    def _search_pulse(self):
-        sectorlist = self.sector_list
-        for a in range(len(sectorlist[0])):
-            for b in range(len(sectorlist)):
-                sector = self.Sector(sectorlist[b][a], (b, a))
-                for i in range(1, self.items_per_sector+1):
-                    if i not in sector.contains:
-                        pass
-
-        #self.sector_list = sectorlist
-
-
-
 
 sudoku = [[0, 0, 8, 0, 0, 0, 9, 0, 0],
           [5, 0, 0, 0, 6, 0, 0, 2, 1],
@@ -167,7 +260,7 @@ sudoku = [[0, 0, 8, 0, 0, 0, 9, 0, 0],
           [0, 0, 6, 0, 0, 0, 2, 0, 0]]
 
 if __name__ == '__main__':
-    duku = Sudoku_Solver([sudoku, 3])
+    duku = Sudoku_Solver([[sudoku, 3]])
     duku.solve()
 
 
