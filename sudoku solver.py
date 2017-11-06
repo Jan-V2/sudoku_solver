@@ -4,8 +4,8 @@
 # 3x3 areas are called sectors
 # build up the already contians array at the same time as the sector map array
 from pprint import pprint
+from utils import log, log_return, get_timestamp
 
-places_in_sector = 0
 
 class Sudoku_Solver:
     # the sudoku is a 2d array that should bij evenly
@@ -28,38 +28,47 @@ class Sudoku_Solver:
         # for rows interate 2nd coord
         sudoku = self.sudoku_list[0]
 
-        made_change = True
-        while made_change:
+        while self._search_sweep(sudoku):
+            pass
+
         #for i in range(10000):
-            made_change = False
-            for i in range(len(sudoku.sector_array)):
-                for j in range(len(sudoku.sector_array)):
-                    sector = sudoku.sector_array[i][j]
-                    #pprint(sector.sector)
-                    if self._search_sector(sector, sudoku):
-                        made_change = True
-                    #pprint(sector.sector)
-                    #print()
-        sudoku.print_sudoku()
 
+        sudoku.log_sudoku()
+        log(str(self.search_checks))
 
+    def _search_sweep(self, sudoku):
+        # does a search across the entire sudoku once
+        made_change = False
+        for i in range(len(sudoku.sector_array)):
+            for j in range(len(sudoku.sector_array)):
+                sector = sudoku.sector_array[i][j]
+                # pprint(sector.sector)
+                if self._search_sector(sector, sudoku):
+                    made_change = True
+                    # pprint(sector.sector)
+                    # log_return()
+        return made_change
 
 
     def _search_sector(self, sector, sudoku):
         changed_data = False
         coords = sector.coords
 
-        #print("searching " + str(coords))
+        #log("searching " + str(coords))
         gridsize = len(sudoku.sector_array)
-        row_sector_list = []
         collum_sector_list = []
+        row_sector_list = []
         for i in range(gridsize):
             if i is not coords[0]:
-                row_sector_list.append([i, coords[1]])
+                collum_sector_list.append([i, coords[1]])
             if i is not coords[1]:
-                collum_sector_list.append([coords[0], i])
+                row_sector_list.append([coords[0], i])
+        # print("rowlist")
+        # pprint(collum_sector_list)
+        # print("collumlist")
+        #pprint(row_sector_list)
         rows = sudoku.get_rows(row_sector_list)
-        collums = sudoku.get_rows(collum_sector_list)
+        collums = sudoku.get_collums(collum_sector_list)
 
         for n in range(1, sudoku.places_per_sector+1):
             if n not in sector.contains:
@@ -73,22 +82,21 @@ class Sudoku_Solver:
 
                 b, coord = self._check_if_one_place(temp_bools)
                 if b:
-                    #print("data acessed added "+ str(n))
-                    #print("coord = " + str(coord))
+                    #log("data acessed added "+ str(n))
+                    #log("coord = " + str(coord))
                     sector.change_value(n, coord)
                     changed_data = True
 
         return changed_data
 
-
     def _mk_collum_false(self, bools, x):
-        for i in range(len(bools[0])):
-            bools[x][i] = False
+        for i in range(len(bools)):
+            bools[i][x] = False
         return bools
 
     def _mk_row_false(self, bools, y):
-        for i in range(len(bools)):
-            bools[i][y] = False
+        for i in range(len(bools[0])):
+            bools[y][i] = False
         return bools
 
     def _check_if_one_place(self, temp_bools):
@@ -106,10 +114,9 @@ class Sudoku_Solver:
         if found_one:
             return found_one, coord
         else:
+            log("no empty places, this is not suppused to happen.")
             return found_one, None
 
-    def _search_pulse(self, sudoku):
-        pass
 
     class Sudoku:
         sector_array = ()
@@ -121,10 +128,10 @@ class Sudoku_Solver:
                     self.sudoku = sudoku_array
                     self.sector_size = sector_size
                 else:  # todo make errorchecking better
-                    print("sudoku not right size")
+                    log("sudoku not right size")
                     raise IOError
             else:
-                print("sudoku not right size")
+                log("sudoku not right size")
                 raise IOError
 
             # generates the sector_data_array
@@ -154,7 +161,7 @@ class Sudoku_Solver:
             self.sector_array = tuple(sector_array)
             self.places_per_sector = sector_size * sector_size
 
-        def print_sudoku(self):
+        def log_sudoku(self):
             ret = []
             sects = self.sector_array
             for j in range(len(sects)):
@@ -168,7 +175,6 @@ class Sudoku_Solver:
                         for item in sector.sector[row]:
                             ret[index].append(item)
             pprint(ret)
-
 
         def get_collums(self, sector_list):
             results = []
@@ -230,16 +236,16 @@ class Sudoku_Solver:
 
             def change_value(self, value, coord):
                 if coord == []:#todo there's a bug here
-                    print("no coord given")
-                    print("coord = " + str(coord))
+                    log("no coord given")
+                    log("coord = " + str(coord))
                     raise ValueError
                 if value in self.contains:
-                    print("sector " + str(self.coords) + " already contains " + str(value))
-                    print("sector = " + str(self.sector))
-                    print("contains = " + str(self.contains))
+                    log("sector " + str(self.coords) + " already contains " + str(value))
+                    log("sector = " + str(self.sector))
+                    log("contains = " + str(self.contains))
                     raise ValueError
                 if value > self.items_per_sector:
-                    print(str(value) + "is higher than the allowed in this sector.\n "
+                    log(str(value) + "is higher than the allowed in this sector.\n "
                                        "the maximum is " + str(self.items_per_sector))
                 #todo more errorchecking (if i can be bothered)
 
@@ -273,11 +279,6 @@ class Sudoku_Solver:
                 return collums
 
 
-def test_collum_falsifier(sudoku):
-    pass
-    # todo test if the collum falsifier works correctly
-    # if so the bug(s) is elsewhere
-
 sudoku = [[0, 0, 8, 0, 0, 0, 9, 0, 0],
           [5, 0, 0, 0, 6, 0, 0, 2, 1],
           [4, 1, 7, 3, 9, 2, 0, 0, 6],
@@ -289,8 +290,9 @@ sudoku = [[0, 0, 8, 0, 0, 0, 9, 0, 0],
           [0, 0, 6, 0, 0, 0, 2, 0, 0]]
 
 if __name__ == '__main__':
+
     pprint(sudoku)
-    print()
+    log_return()
     duku = Sudoku_Solver([[sudoku, 3]])
     duku.solve()
 
