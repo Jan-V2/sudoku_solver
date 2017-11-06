@@ -28,15 +28,20 @@ class Sudoku_Solver:
         # for rows interate 2nd coord
         sudoku = self.sudoku_list[0]
 
+        made_change = True
+        while made_change:
+        #for i in range(10000):
+            made_change = False
+            for i in range(len(sudoku.sector_array)):
+                for j in range(len(sudoku.sector_array)):
+                    sector = sudoku.sector_array[i][j]
+                    #pprint(sector.sector)
+                    if self._search_sector(sector, sudoku):
+                        made_change = True
+                    #pprint(sector.sector)
+                    #print()
+        sudoku.print_sudoku()
 
-        for i in range(len(sudoku.sector_array)):
-            for j in range(len(sudoku.sector_array)):
-                sector = sudoku.sector_array[i][j]
-                pprint(sector.sector)
-                print()
-                self._search_sector(sector, sudoku)
-                print()
-                pprint(sector.sector)
 
 
 
@@ -44,7 +49,7 @@ class Sudoku_Solver:
         changed_data = False
         coords = sector.coords
 
-        print("searching " + str(coords))
+        #print("searching " + str(coords))
         gridsize = len(sudoku.sector_array)
         row_sector_list = []
         collum_sector_list = []
@@ -68,8 +73,8 @@ class Sudoku_Solver:
 
                 b, coord = self._check_if_one_place(temp_bools)
                 if b:
-                    print("data acessed added "+ str(n))
-                    print("coord = " + str(coord))
+                    #print("data acessed added "+ str(n))
+                    #print("coord = " + str(coord))
                     sector.change_value(n, coord)
                     changed_data = True
 
@@ -87,6 +92,7 @@ class Sudoku_Solver:
         return bools
 
     def _check_if_one_place(self, temp_bools):
+        # returns true and the coords if there was only one vart thats true in the array
         found_one = False
         coord = []
         for i in range(len(temp_bools)):
@@ -96,8 +102,11 @@ class Sudoku_Solver:
                         found_one = True
                         coord = [i, j]
                     else:
-                        return False, []
-        return True, coord
+                        return False, None
+        if found_one:
+            return found_one, coord
+        else:
+            return found_one, None
 
     def _search_pulse(self, sudoku):
         pass
@@ -144,6 +153,22 @@ class Sudoku_Solver:
                     sector_array[i].append(self.Sector(sector_data_array[i][j], [i, j], sector_size))
             self.sector_array = tuple(sector_array)
             self.places_per_sector = sector_size * sector_size
+
+        def print_sudoku(self):
+            ret = []
+            sects = self.sector_array
+            for j in range(len(sects)):
+                for i in range(len(sects[0])):
+                    ret.append([])
+                for sector in sects[j]:
+                    sector_height = len(sector.sector)
+
+                    for row in range(len(sector.sector)):
+                        index = row + j * sector_height
+                        for item in sector.sector[row]:
+                            ret[index].append(item)
+            pprint(ret)
+
 
         def get_collums(self, sector_list):
             results = []
@@ -248,6 +273,10 @@ class Sudoku_Solver:
                 return collums
 
 
+def test_collum_falsifier(sudoku):
+    pass
+    # todo test if the collum falsifier works correctly
+    # if so the bug(s) is elsewhere
 
 sudoku = [[0, 0, 8, 0, 0, 0, 9, 0, 0],
           [5, 0, 0, 0, 6, 0, 0, 2, 1],
@@ -260,6 +289,8 @@ sudoku = [[0, 0, 8, 0, 0, 0, 9, 0, 0],
           [0, 0, 6, 0, 0, 0, 2, 0, 0]]
 
 if __name__ == '__main__':
+    pprint(sudoku)
+    print()
     duku = Sudoku_Solver([[sudoku, 3]])
     duku.solve()
 
